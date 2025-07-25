@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/icon180.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="RDS">
+    <meta name="apple-mobile-web-app-title" content="VNRDS">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Рапидо Старт</title>
     <style>
-        /* Обновлённые стили */
         :root {
             --bg-color: #f5f5f7;
             --text-color: #1c1c1e;
@@ -634,14 +633,19 @@
         return !history.includes(comboString);
     }
     
-    // Выбор случайных чисел из диапазона
-    function pickRandomFromRange(arr, start, end, count) {
-        const pool = arr.slice(start, end);
+    // Выбор случайных чисел из группы
+    function selectRandomFromGroup(group, count) {
         const result = [];
-        while(result.length < count && pool.length > 0) {
-            const idx = Math.floor(Math.random() * pool.length);
-            result.push(pool.splice(idx, 1)[0]);
+        const tempGroup = [...group]; // Копируем массив
+        
+        // Выбираем случайные числа без повторений
+        for (let i = 0; i < count; i++) {
+            if (tempGroup.length === 0) break;
+            const randomIndex = Math.floor(Math.random() * tempGroup.length);
+            result.push(tempGroup[randomIndex]);
+            tempGroup.splice(randomIndex, 1);
         }
+        
         return result;
     }
     
@@ -769,32 +773,37 @@
         }
     }
     
-    // Метод Карнауха (комбинация холодных и горячих чисел)
+    // Оптимизированный метод Карнауха
     function generateKarnaughNumbers() {
         const { countField1, countField2 } = calculateFrequencies();
 
-        if(history.length < 10) {
+        if (history.length < 5) {
             return generateColdNumbers();
         }
-        
+
         // Сортируем числа по частоте выпадения
         let numbers1 = Array.from({ length: 20 }, (_, i) => i + 1);
         numbers1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
+
+        // Определяем границы групп
+        const coldGroup = numbers1.slice(0, 10);  // 50% самых холодных
+        const hotGroup = numbers1.slice(10, 20);  // 50% самых горячих
+
+        // Выбираем случайные числа из групп
+        const coldNumbers = selectRandomFromGroup(coldGroup, 5);
+        const hotNumbers = selectRandomFromGroup(hotGroup, 3);
         
-        // Выбираем 5 холодных из нижней половины и 3 горячих из верхней
-        const coldNumbers = pickRandomFromRange(numbers1, 0, 10, 5);
-        const hotNumbers = pickRandomFromRange(numbers1, 10, 20, 3);
         const selected1 = [...coldNumbers, ...hotNumbers].sort((a, b) => a - b);
-        
+
         // Для второго поля выбираем среднее по частоте
         let numbers2 = Array.from({ length: 4 }, (_, i) => i + 1);
         numbers2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
-        const selected2 = numbers2[1] || numbers2[0]; // берем второе по холодности
-        
+        const selected2 = numbers2[1] || numbers2[0];
+
         return {
             nums1: selected1,
             num2: selected2,
-            explanation: 'Метод Карнауха: 5 холодных + 3 горячих числа'
+            explanation: 'Метод Карнауха: 5 случайных холодных + 3 случайных горячих числа'
         };
     }
     
@@ -828,8 +837,10 @@
         nums1.forEach(n => {
             const div = document.createElement('div');
             div.className = 'number';
-            if(method === 'karnaugh' && nums1.indexOf(n) < 5) {
-                div.classList.add('special');
+            if(method === 'karnaugh') {
+                // Определяем холодное или горячее число
+                const isCold = nums1.indexOf(n) < 5;
+                div.classList.add(isCold ? 'special' : 'selected');
             }
             div.textContent = n;
             field1.appendChild(div);
@@ -846,7 +857,9 @@
         // Анимация выбора
         setTimeout(() => {
             field1.querySelectorAll('.number').forEach(el => {
-                el.classList.add('selected');
+                if(!el.classList.contains('special')) {
+                    el.classList.add('selected');
+                }
             });
             div2.classList.add('selected');
         }, 100);
