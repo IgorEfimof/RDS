@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon180.png">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VNRDS">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Рапидо Старт</title>
+  <style>
+   :root {
+            --bg-color: #f5f5f7;
+            --text-color: #1c1c1e;
+            --card-bg: white;
+            --border-color: #ddd;
+            --primary-color: #0066cc;
+            --secondary-color: #ff2d55;
+            --keyboard-bg: #e5e5ea;
+            --button-active: #004499;
+            --history-border: #eee;
+            --selected-color: #34c759;
+            --special-color: #af52de;
+        }
+
+        .dark-mode {
+            --bg-color: #1c1c1e;
+            --text-color: #f5f5f7;
+            --card-bg: #2c2c2e;
+            --border-color: #444;
+            --primary-color: #0a84ff;
+            --secondary-color: #ff375f;
+            --keyboard-bg: #3a3a3c;
+            --button-active: #0061c8;
+            --history-border: #444;
+            --selected-color: #30d158;
+            --special-color: #bf5af2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 10px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            max-width: 100%;
+            margin: 0 auto;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .container {
+            max-width: 100%;
+            width: 100%;
+            margin: 0 auto;
+            padding-bottom: 280px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+        h3 {
+            color: var(--primary-color);
+            font-size: 1rem;
+            margin: 10px 0 5px;
+        }
+        .numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        .number {
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 15px;
+            transition: transform 0.2s;
+        }
+        .number.selected {
+            background: var(--selected-color);
+            transform: scale(1.1);
+        }
+        .number.small {
+            background: var(--secondary-color);
+            width: 36px;
+        }
+        .number.special {
+            background: var(--special-color);
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 8px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:active {
+            background: var(--button-active);
+        }
+        button.secondary {
+            background: var(--keyboard-bg);
+            color: var(--text-color);
+        }
+        #fakeInput {
+            position: absolute;
+            opacity: 0;
+            height: 0;
+            width: 0;
+        }
+        #inputDisplay {
+            width: 100%;
+            min-height: 70px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+            font-size: 15px;
+            background: var(--card-bg);
+            word-wrap: break-word;
+            color: var(--text-color);
+        }
+        .input-active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0,102,204,0.2);
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 13px;
+        }
+        .stats-table th, .stats-table td {
+            padding: 6px;
+            text-align: left;
+            border-bottom: 1px solid var(--history-border);
+        }
+        .hot {
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+        .cold {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .history-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--history-border);
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-item button {
+            width: auto;
+            padding: 2px 8px;
+            margin: 0;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .custom-keyboard {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--keyboard-bg);
+            padding: 8px;
+            border-top: 1px solid var(--border-color);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .keyboard-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .keyboard-key {
+            flex: 1;
+            height: 48px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            color: var(--text-color);
+        }
+        .keyboard-key:active {
+            background: var(--history-border);
+        }
+        .keyboard-key.wide {
+            flex: 2;
+        }
+        .keyboard-key.blue {
+            background: var(--primary-color);
+            color: white;
+        }
+        .keyboard-key.red {
+            background: var(--secondary-color);
+            color: white;
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .validation-error {
+            color: var(--secondary-color);
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+        .method-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .method-btn {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background: var(--keyboard-bg);
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .method-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        .info-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            line-height: 16px;
+            font-size: 12px;
+            margin-left: 5px;
+            cursor: help;
+        }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle">🌓</button>
+    
+    <div class="container">
+        <div class="card">
+            <h1>Рапидо Старт</h1>
+            <p class="subtitle">Анализ с методами Огнева и Карнауха</p>
+        </div>
+        
+        <div class="card">
+            <h2>Сгенерировать числа</h2>
+            <div class="method-selector">
+                <div class="method-btn active" data-method="cold">Холодные</div>
+                <div class="method-btn" data-method="ogneva">Огнева<span class="info-icon" title="Характеристическое число">?</span></div>
+                <div class="method-btn" data-method="karnaugh">Карнауха<span class="info-icon" title="Метод математика П.В. Карнауха">?</span></div>
+                <div class="method-btn" data-method="random">Случайные</div>
+            </div>
+            <p>Поле 1 (8 из 20):</p>
+            <div class="numbers" id="field1"></div>
+            <p>Поле 2 (1 из 4):</p>
+            <div class="numbers" id="field2"></div>
+            <button id="genBtn">Сгенерировать</button>
+        </div>
+        
+        <div class="card">
+            <h2>Добавить историю</h2>
+            <div id="inputContainer" style="position:relative;">
+                <input type="text" id="fakeInput" readonly />
+                <div id="inputDisplay" onclick="showKeyboard()">Коснитесь для ввода (формат: 1,2,3,4,5,6,7,8 | 1)</div>
+                <div id="validationError" class="validation-error"></div>
+            </div>
+            <button id="addHistoryBtn">Добавить</button>
+        </div>
+        
+        <div class="card">
+            <h2>Статистика чисел</h2>
+            <table class="stats-table" id="statsTable"></table>
+        </div>
+        
+        <div class="card" style="max-height: 300px; overflow-y: auto;">
+            <h2>История розыгрышей</h2>
+            <div id="historyList"></div>
+            <button id="clearHistoryBtn" class="secondary">Очистить историю</button>
+        </div>
+    </div>
+
+    <div class="custom-keyboard" id="customKeyboard">
+        <div class="keyboard-row">
+            <div class="keyboard-key">1</div>
+            <div class="keyboard-key">2</div>
+            <div class="keyboard-key">3</div>
+            <div class="keyboard-key">4</div>
+            <div class="keyboard-key">5</div>
+            <div class="keyboard-key">6</div>
+            <div class="keyboard-key">7</div>
+            <div class="keyboard-key">8</div>
+            <div class="keyboard-key">9</div>
+            <div class="keyboard-key wide red" id="keyDelete">⌫</div>
+        </div>
+        <div class="keyboard-row">
+            <div class="keyboard-key">0</div>
+            <div class="keyboard-key">,</div>
+            <div class="keyboard-key">|</div>
+            <div class="keyboard-key wide blue" id="keyDone">Готово</div>
+        </div>
+    </div>
+
+<script>
+  // Валидация истории при загрузке
+  let historyRaw = JSON.parse(localStorage.getItem('rapido2History') || '[]');
+  let history = historyRaw.filter(validateInput);
+  if (history.length !== historyRaw.length) {
+    localStorage.setItem('rapido2History', JSON.stringify(history));
+  }
+
+  function pickRandom(arr, n) {
+    const copy = [...arr];
+    const result = [];
+    while (result.length < n && copy.length) {
+      const idx = Math.floor(Math.random() * copy.length);
+      result.push(copy.splice(idx, 1)[0]);
+    }
+    return result;
+  }
+
+  function generateKarnaughNumbers() {
+    const countField1 = Array(20).fill(0);
+    const countField2 = Array(4).fill(0);
+    history.forEach(entry => {
+      const [f1, f2] = entry.split('|');
+      f1.split(',').map(Number).forEach(n => { if (n >= 1 && n <= 20) countField1[n - 1]++; });
+      const n2 = parseInt(f2);
+      if (n2 >= 1 && n2 <= 4) countField2[n2 - 1]++;
+    });
+
+    if (history.length < 10) return generateColdNumbers();
+
+    let nums1 = Array.from({ length: 20 }, (_, i) => i + 1);
+    nums1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
+    const selected1 = [...pickRandom(nums1.slice(0, 10), 5), ...pickRandom(nums1.slice(-10), 3)].sort((a, b) => a - b);
+
+    let nums2 = Array.from({ length: 4 }, (_, i) => i + 1);
+    nums2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
+    const selected2 = nums2[1] || nums2[0];
+
+    const candidate = selected1.join(',') + ' | ' + selected2;
+    if (history.includes(candidate)) return generateRandomNumbers();
+
+    displayNumbers(selected1, selected2, 'karnaugh');
+  }
+
+  function generateOgnevaNumbers() {
+    if (history.length < 5) return generateColdNumbers();
+    let totalOgneva = 0;
+    history.forEach(entry => {
+      const [f1, f2] = entry.split('|');
+      const sum = f1.split(',').map(Number).reduce((a, b) => a + b, 0);
+      totalOgneva += sum * parseInt(f2);
+    });
+    const avgOgneva = totalOgneva / history.length;
+
+    const attempts = [];
+    while (attempts.length < 10) {
+      let nums1 = [];
+      while (nums1.length < 8) {
+        const n = Math.floor(Math.random() * 20) + 1;
+        if (!nums1.includes(n)) nums1.push(n);
+      }
+      nums1.sort((a, b) => a - b);
+      const num2 = Math.floor(Math.random() * 4) + 1;
+      const key = nums1.join(',') + ' | ' + num2;
+      if (!history.includes(key)) {
+        const ogneva = nums1.reduce((a, b) => a + b, 0) * num2;
+        attempts.push({ nums1, num2, diff: Math.abs(ogneva - avgOgneva) });
+      }
+    }
+
+    if (attempts.length === 0) return generateRandomNumbers();
+    attempts.sort((a, b) => a.diff - b.diff);
+    const best = attempts[0];
+    displayNumbers(best.nums1, best.num2, 'ogneva');
+  }
+
+  function generateColdNumbers() {
+    const countField1 = Array(20).fill(0);
+    const countField2 = Array(4).fill(0);
+    history.forEach(entry => {
+      const [f1, f2] = entry.split('|');
+      f1.split(',').map(Number).forEach(n => { if (n >= 1 && n <= 20) countField1[n - 1]++; });
+      const n2 = parseInt(f2);
+      if (n2 >= 1 && n2 <= 4) countField2[n2 - 1]++;
+    });
+
+    if (history.length === 0) return generateRandomNumbers();
+
+    let numbers1 = Array.from({ length: 20 }, (_, i) => i + 1);
+    numbers1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
+    const selected1 = numbers1.slice(0, 8).sort((a, b) => a - b);
+
+    let numbers2 = Array.from({ length: 4 }, (_, i) => i + 1);
+    numbers2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
+    const selected2 = numbers2[0];
+
+    const candidate = selected1.join(',') + ' | ' + selected2;
+    if (history.includes(candidate)) return generateRandomNumbers();
+
+    displayNumbers(selected1, selected2, 'cold');
+  }
+</script>
+</body>
+</html>
