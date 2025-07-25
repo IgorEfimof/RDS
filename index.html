@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon180.png">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="VNRDS">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Рапидо Старт</title>
-  <style>
-   :root {
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon180.png">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VNRDS">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Рапидо Старт</title>
+    <style>
+        /* Обновлённые стили */
+        :root {
             --bg-color: #f5f5f7;
             --text-color: #1c1c1e;
             --card-bg: white;
@@ -300,10 +301,16 @@
             margin-left: 5px;
             cursor: help;
         }
-  </style>
+        .method-explanation {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            min-height: 20px;
+        }
+    </style>
 </head>
 <body>
-  <button class="theme-toggle" id="themeToggle">🌓</button>
+    <button class="theme-toggle" id="themeToggle">🌓</button>
     
     <div class="container">
         <div class="card">
@@ -314,15 +321,16 @@
         <div class="card">
             <h2>Сгенерировать числа</h2>
             <div class="method-selector">
-                <div class="method-btn active" data-method="cold">Холодные</div>
-                <div class="method-btn" data-method="ogneva">Огнева<span class="info-icon" title="Характеристическое число">?</span></div>
-                <div class="method-btn" data-method="karnaugh">Карнауха<span class="info-icon" title="Метод математика П.В. Карнауха">?</span></div>
+                <div class="method-btn active" data-method="cold">Холодные<span class="info-icon" title="Самые редко выпадающие числа">?</span></div>
+                <div class="method-btn" data-method="ogneva">Огнева<span class="info-icon" title="Характеристическое число = (Сумма чисел поля 1) × (Число поля 2)">?</span></div>
+                <div class="method-btn" data-method="karnaugh">Карнауха<span class="info-icon" title="Сочетание 5 холодных и 3 горячих чисел">?</span></div>
                 <div class="method-btn" data-method="random">Случайные</div>
             </div>
             <p>Поле 1 (8 из 20):</p>
             <div class="numbers" id="field1"></div>
             <p>Поле 2 (1 из 4):</p>
             <div class="numbers" id="field2"></div>
+            <div id="methodExplanation" class="method-explanation"></div>
             <button id="genBtn">Сгенерировать</button>
         </div>
         
@@ -370,106 +378,484 @@
     </div>
 
 <script>
-  // Валидация истории при загрузке
-  let historyRaw = JSON.parse(localStorage.getItem('rapido2History') || '[]');
-  let history = historyRaw.filter(validateInput);
-  if (history.length !== historyRaw.length) {
-    localStorage.setItem('rapido2History', JSON.stringify(history));
-  }
-
-  function pickRandom(arr, n) {
-    const copy = [...arr];
-    const result = [];
-    while (result.length < n && copy.length) {
-      const idx = Math.floor(Math.random() * copy.length);
-      result.push(copy.splice(idx, 1)[0]);
+    // --- Тема ---
+    const themeToggle = document.getElementById('themeToggle');
+    function applyTheme(dark) {
+        if(dark) {
+            document.documentElement.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'true');
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'false');
+        }
     }
-    return result;
-  }
+    themeToggle.onclick = () => {
+        const dark = document.documentElement.classList.contains('dark-mode');
+        applyTheme(!dark);
+    };
+    // Инициализация темы по сохранённому значению
+    applyTheme(localStorage.getItem('darkMode') === 'true');
 
-  function generateKarnaughNumbers() {
-    const countField1 = Array(20).fill(0);
-    const countField2 = Array(4).fill(0);
-    history.forEach(entry => {
-      const [f1, f2] = entry.split('|');
-      f1.split(',').map(Number).forEach(n => { if (n >= 1 && n <= 20) countField1[n - 1]++; });
-      const n2 = parseInt(f2);
-      if (n2 >= 1 && n2 <= 4) countField2[n2 - 1]++;
+    // --- История с валидацией ---
+    function validateInputSilent(val) {
+        if (typeof val !== 'string') return false;
+        if (!/^(\d{1,2},){7}\d{1,2}\s*\|\s*\d{1,2}$/.test(val)) return false;
+        
+        const [field1, field2] = val.split(/\s*\|\s*/);
+        const nums1 = field1.split(',').map(n => parseInt(n));
+        const num2 = parseInt(field2);
+        
+        // Проверка диапазонов
+        const invalid1 = nums1.filter(n => n < 1 || n > 20);
+        if(invalid1.length > 0) return false;
+        if(num2 < 1 || num2 > 4) return false;
+        
+        // Проверка дубликатов в поле 1
+        const unique = new Set(nums1);
+        if(unique.size !== 8) return false;
+        
+        return true;
+    }
+    
+    let history = JSON.parse(localStorage.getItem('rapido2History') || '[]');
+    history = history.filter(entry => validateInputSilent(entry));
+    
+    // --- Отображение истории ---
+    const historyList = document.getElementById('historyList');
+    function renderHistory() {
+        historyList.innerHTML = '';
+        history.forEach((entry, idx) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <span>${entry}</span>
+                <button data-idx="${idx}">X</button>
+            `;
+            historyList.appendChild(div);
+        });
+    }
+    renderHistory();
+    
+    // Удаление записи
+    historyList.addEventListener('click', e => {
+        if(e.target.tagName === 'BUTTON') {
+            const idx = +e.target.dataset.idx;
+            history.splice(idx, 1);
+            saveHistory();
+            renderHistory();
+            updateStats();
+        }
     });
+    
+    // Очистка истории
+    document.getElementById('clearHistoryBtn').onclick = () => {
+        if(confirm('Очистить всю историю?')) {
+            history = [];
+            saveHistory();
+            renderHistory();
+            updateStats();
+            generateNumbers();
+        }
+    };
 
-    if (history.length < 10) return generateColdNumbers();
-
-    let nums1 = Array.from({ length: 20 }, (_, i) => i + 1);
-    nums1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
-    const selected1 = [...pickRandom(nums1.slice(0, 10), 5), ...pickRandom(nums1.slice(-10), 3)].sort((a, b) => a - b);
-
-    let nums2 = Array.from({ length: 4 }, (_, i) => i + 1);
-    nums2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
-    const selected2 = nums2[1] || nums2[0];
-
-    const candidate = selected1.join(',') + ' | ' + selected2;
-    if (history.includes(candidate)) return generateRandomNumbers();
-
-    displayNumbers(selected1, selected2, 'karnaugh');
-  }
-
-  function generateOgnevaNumbers() {
-    if (history.length < 5) return generateColdNumbers();
-    let totalOgneva = 0;
-    history.forEach(entry => {
-      const [f1, f2] = entry.split('|');
-      const sum = f1.split(',').map(Number).reduce((a, b) => a + b, 0);
-      totalOgneva += sum * parseInt(f2);
-    });
-    const avgOgneva = totalOgneva / history.length;
-
-    const attempts = [];
-    while (attempts.length < 10) {
-      let nums1 = [];
-      while (nums1.length < 8) {
-        const n = Math.floor(Math.random() * 20) + 1;
-        if (!nums1.includes(n)) nums1.push(n);
-      }
-      nums1.sort((a, b) => a - b);
-      const num2 = Math.floor(Math.random() * 4) + 1;
-      const key = nums1.join(',') + ' | ' + num2;
-      if (!history.includes(key)) {
-        const ogneva = nums1.reduce((a, b) => a + b, 0) * num2;
-        attempts.push({ nums1, num2, diff: Math.abs(ogneva - avgOgneva) });
-      }
+    function saveHistory() {
+        localStorage.setItem('rapido2History', JSON.stringify(history));
     }
 
-    if (attempts.length === 0) return generateRandomNumbers();
-    attempts.sort((a, b) => a.diff - b.diff);
-    const best = attempts[0];
-    displayNumbers(best.nums1, best.num2, 'ogneva');
-  }
+    // --- Ввод ---
+    const inputDisplay = document.getElementById('inputDisplay');
+    const fakeInput = document.getElementById('fakeInput');
+    const customKeyboard = document.getElementById('customKeyboard');
+    const validationError = document.getElementById('validationError');
 
-  function generateColdNumbers() {
-    const countField1 = Array(20).fill(0);
-    const countField2 = Array(4).fill(0);
-    history.forEach(entry => {
-      const [f1, f2] = entry.split('|');
-      f1.split(',').map(Number).forEach(n => { if (n >= 1 && n <= 20) countField1[n - 1]++; });
-      const n2 = parseInt(f2);
-      if (n2 >= 1 && n2 <= 4) countField2[n2 - 1]++;
+    function showKeyboard() {
+        customKeyboard.style.display = 'flex';
+        inputDisplay.classList.add('input-active');
+        validationError.style.display = 'none';
+    }
+    function hideKeyboard() {
+        customKeyboard.style.display = 'none';
+        inputDisplay.classList.remove('input-active');
+    }
+
+    // Отобразить введённый текст
+    function updateInputDisplay() {
+        inputDisplay.textContent = fakeInput.value || 'Коснитесь для ввода (формат: 1,2,3,4,5,6,7,8 | 1)';
+    }
+
+    // Клавиши виртуальной клавиатуры
+    customKeyboard.addEventListener('click', e => {
+        if(!e.target.classList.contains('keyboard-key')) return;
+        const key = e.target.textContent;
+        if(key === 'Готово') {
+            hideKeyboard();
+            return;
+        }
+        if(key === '⌫') {
+            fakeInput.value = fakeInput.value.slice(0, -1);
+            updateInputDisplay();
+            return;
+        }
+        // Разрешаем цифры, запятую и вертикальную черту
+        if(/[0-9,|]/.test(key)) {
+            fakeInput.value += key;
+            updateInputDisplay();
+        }
     });
 
-    if (history.length === 0) return generateRandomNumbers();
+    inputDisplay.onclick = showKeyboard;
 
-    let numbers1 = Array.from({ length: 20 }, (_, i) => i + 1);
-    numbers1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
-    const selected1 = numbers1.slice(0, 8).sort((a, b) => a - b);
+    // --- Валидация ввода ---
+    function validateInput(val) {
+        validationError.style.display = 'none';
+        
+        // Проверка формата
+        if(!/^(\d{1,2},){7}\d{1,2}\s*\|\s*\d{1,2}$/.test(val)) {
+            validationError.textContent = 'Неверный формат. Пример: 1,2,3,4,5,6,7,8 | 1';
+            validationError.style.display = 'block';
+            return false;
+        }
+        
+        const [field1, field2] = val.split(/\s*\|\s*/);
+        const nums1 = field1.split(',').map(n => parseInt(n));
+        const num2 = parseInt(field2);
+        
+        // Проверка диапазонов
+        const invalid1 = nums1.filter(n => n < 1 || n > 20);
+        if(invalid1.length > 0) {
+            validationError.textContent = `Числа в поле 1 должны быть от 1 до 20. Ошибка: ${invalid1.join(', ')}`;
+            validationError.style.display = 'block';
+            return false;
+        }
+        
+        if(num2 < 1 || num2 > 4) {
+            validationError.textContent = 'Число в поле 2 должно быть от 1 до 4';
+            validationError.style.display = 'block';
+            return false;
+        }
+        
+        // Проверка дубликатов в поле 1
+        const unique = new Set(nums1);
+        if(unique.size !== 8) {
+            validationError.textContent = 'В поле 1 не должно быть повторяющихся чисел';
+            validationError.style.display = 'block';
+            return false;
+        }
+        
+        return true;
+    }
 
-    let numbers2 = Array.from({ length: 4 }, (_, i) => i + 1);
-    numbers2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
-    const selected2 = numbers2[0];
+    // --- Добавление в историю ---
+    document.getElementById('addHistoryBtn').onclick = () => {
+        const val = fakeInput.value.trim();
+        if(!val) {
+            validationError.textContent = 'Введите числа в формате: 1,2,3,4,5,6,7,8 | 1';
+            validationError.style.display = 'block';
+            return;
+        }
+        
+        if(!validateInput(val)) return;
+        
+        // Проверка дубликатов в истории
+        if(history.includes(val)) {
+            validationError.textContent = 'Эта комбинация уже есть в истории';
+            validationError.style.display = 'block';
+            return;
+        }
+        
+        history.push(val);
+        saveHistory();
+        renderHistory();
+        updateStats();
+        fakeInput.value = '';
+        updateInputDisplay();
+        hideKeyboard();
+        
+        // Обновляем генерацию после добавления
+        generateNumbers();
+    };
 
-    const candidate = selected1.join(',') + ' | ' + selected2;
-    if (history.includes(candidate)) return generateRandomNumbers();
+    // --- Статистика ---
+    const statsTable = document.getElementById('statsTable');
 
-    displayNumbers(selected1, selected2, 'cold');
-  }
+    function calculateFrequencies() {
+        const countField1 = Array(20).fill(0);
+        const countField2 = Array(4).fill(0);
+
+        history.forEach(entry => {
+            const parts = entry.split(/\s*\|\s*/);
+            if(parts.length !== 2) return;
+            const nums1 = parts[0].split(',').map(n => parseInt(n));
+            const nums2 = parseInt(parts[1]);
+
+            nums1.forEach(n => {
+                if(n >= 1 && n <= 20) countField1[n - 1]++;
+            });
+            if(nums2 >= 1 && nums2 <= 4) countField2[nums2 - 1]++;
+        });
+
+        return { countField1, countField2 };
+    }
+
+    function updateStats() {
+        const { countField1, countField2 } = calculateFrequencies();
+        
+        let html = '<tr><th>Число (8 из 20)</th><th>Частота</th><th>Число (1 из 4)</th><th>Частота</th></tr>';
+
+        for(let i = 0; i < 20; i++) {
+            const hotColdClass1 = countField1[i] > 0 ? 'hot' : 'cold';
+            const hotColdClass2 = (i < 4 && countField2[i] > 0) ? 'hot' : 'cold';
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td class="${hotColdClass1}">${countField1[i]}</td>
+                <td>${i < 4 ? i + 1 : ''}</td>
+                <td>${i < 4 ? countField2[i] : ''}</td>
+            </tr>`;
+        }
+        statsTable.innerHTML = html;
+    }
+    
+    // --- Методы генерации ---
+    let currentMethod = 'cold';
+    
+    // Переключение методов
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentMethod = btn.dataset.method;
+            generateNumbers();
+        });
+    });
+    
+    // Проверка уникальности комбинации
+    function isUniqueCombination(nums1, num2) {
+        const comboString = nums1.join(',') + ' | ' + num2;
+        return !history.includes(comboString);
+    }
+    
+    // Выбор случайных чисел из диапазона
+    function pickRandomFromRange(arr, start, end, count) {
+        const pool = arr.slice(start, end);
+        const result = [];
+        while(result.length < count && pool.length > 0) {
+            const idx = Math.floor(Math.random() * pool.length);
+            result.push(pool.splice(idx, 1)[0]);
+        }
+        return result;
+    }
+    
+    // Генерация с проверкой уникальности
+    function generateWithRetry(generator, maxAttempts = 50) {
+        let attempt = 0;
+        while(attempt < maxAttempts) {
+            const result = generator();
+            if(isUniqueCombination(result.nums1, result.num2)) {
+                return result;
+            }
+            attempt++;
+        }
+        // Если не получилось найти уникальную комбинацию
+        return {
+            ...generator(),
+            explanation: (generator().explanation || '') + ' [Не удалось найти уникальную комбинацию]'
+        };
+    }
+    
+    // Основная функция генерации
+    function generateNumbers() {
+        let result;
+        switch(currentMethod) {
+            case 'cold':
+                result = generateWithRetry(generateColdNumbers);
+                break;
+            case 'ogneva':
+                result = generateOgnevaNumbers();
+                break;
+            case 'karnaugh':
+                result = generateWithRetry(generateKarnaughNumbers);
+                break;
+            case 'random':
+                result = generateWithRetry(generateRandomNumbers);
+                break;
+            default:
+                result = generateColdNumbers();
+        }
+        displayNumbers(result.nums1, result.num2, currentMethod, result.explanation);
+    }
+    
+    // Метод холодных чисел
+    function generateColdNumbers() {
+        const { countField1, countField2 } = calculateFrequencies();
+
+        if(history.length === 0) {
+            return generateRandomNumbers();
+        }
+
+        // Выбираем 8 самых редких чисел для первого поля
+        let numbers1 = Array.from({ length: 20 }, (_, i) => i + 1);
+        numbers1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
+        const selected1 = numbers1.slice(0, 8).sort((a, b) => a - b);
+
+        // Для второго поля выбираем самое редкое число
+        let numbers2 = Array.from({ length: 4 }, (_, i) => i + 1);
+        numbers2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
+        const selected2 = numbers2[0];
+
+        return {
+            nums1: selected1,
+            num2: selected2,
+            explanation: 'Метод холодных чисел: 8 самых редко выпадающих чисел'
+        };
+    }
+    
+    // Метод Огнева (характеристическое число)
+    function generateOgnevaNumbers() {
+        if(history.length < 5) {
+            return generateColdNumbers();
+        }
+        
+        // Рассчитываем среднее характеристическое число
+        let totalOgneva = 0;
+        history.forEach(entry => {
+            const parts = entry.split(/\s*\|\s*/);
+            if(parts.length !== 2) return;
+            const nums1 = parts[0].split(',').map(Number);
+            const num2 = parseInt(parts[1]);
+            const sum1 = nums1.reduce((a, b) => a + b, 0);
+            totalOgneva += sum1 * num2;
+        });
+        const avgOgneva = totalOgneva / history.length;
+        
+        // Генерируем комбинации и выбираем лучшую
+        let bestCombinations = [];
+        const MAX_ATTEMPTS = 100;
+        const MAX_CANDIDATES = 5;
+        
+        for(let i = 0; i < MAX_ATTEMPTS; i++) {
+            const nums1 = [];
+            while(nums1.length < 8) {
+                const n = Math.floor(Math.random() * 20) + 1;
+                if(!nums1.includes(n)) nums1.push(n);
+            }
+            nums1.sort((a, b) => a - b);
+            const num2 = Math.floor(Math.random() * 4) + 1;
+            
+            // Проверка уникальности
+            if(!isUniqueCombination(nums1, num2)) continue;
+            
+            const sum1 = nums1.reduce((a, b) => a + b, 0);
+            const ogneva = sum1 * num2;
+            const diff = Math.abs(ogneva - avgOgneva);
+            
+            // Сохраняем лучшие варианты
+            if(bestCombinations.length < MAX_CANDIDATES || diff < bestCombinations[bestCombinations.length-1].diff) {
+                bestCombinations.push({nums1, num2, diff, ogneva});
+                bestCombinations.sort((a, b) => a.diff - b.diff);
+                bestCombinations = bestCombinations.slice(0, MAX_CANDIDATES);
+            }
+        }
+        
+        // Выбираем случайного кандидата из лучших
+        if(bestCombinations.length > 0) {
+            const selected = bestCombinations[Math.floor(Math.random() * Math.min(3, bestCombinations.length))];
+            return {
+                nums1: selected.nums1,
+                num2: selected.num2,
+                explanation: `Метод Огнева: характеристическое число ${selected.ogneva} (среднее: ${avgOgneva.toFixed(1)})`
+            };
+        } else {
+            return generateRandomNumbers();
+        }
+    }
+    
+    // Метод Карнауха (комбинация холодных и горячих чисел)
+    function generateKarnaughNumbers() {
+        const { countField1, countField2 } = calculateFrequencies();
+
+        if(history.length < 10) {
+            return generateColdNumbers();
+        }
+        
+        // Сортируем числа по частоте выпадения
+        let numbers1 = Array.from({ length: 20 }, (_, i) => i + 1);
+        numbers1.sort((a, b) => countField1[a - 1] - countField1[b - 1]);
+        
+        // Выбираем 5 холодных из нижней половины и 3 горячих из верхней
+        const coldNumbers = pickRandomFromRange(numbers1, 0, 10, 5);
+        const hotNumbers = pickRandomFromRange(numbers1, 10, 20, 3);
+        const selected1 = [...coldNumbers, ...hotNumbers].sort((a, b) => a - b);
+        
+        // Для второго поля выбираем среднее по частоте
+        let numbers2 = Array.from({ length: 4 }, (_, i) => i + 1);
+        numbers2.sort((a, b) => countField2[a - 1] - countField2[b - 1]);
+        const selected2 = numbers2[1] || numbers2[0]; // берем второе по холодности
+        
+        return {
+            nums1: selected1,
+            num2: selected2,
+            explanation: 'Метод Карнауха: 5 холодных + 3 горячих числа'
+        };
+    }
+    
+    // Случайная генерация
+    function generateRandomNumbers() {
+        const nums1 = [];
+        while(nums1.length < 8) {
+            const n = Math.floor(Math.random() * 20) + 1;
+            if(!nums1.includes(n)) nums1.push(n);
+        }
+        nums1.sort((a, b) => a - b);
+        const num2 = Math.floor(Math.random() * 4) + 1;
+        
+        return {
+            nums1: nums1,
+            num2: num2,
+            explanation: 'Случайная генерация чисел'
+        };
+    }
+    
+    // Отображение сгенерированных чисел
+    function displayNumbers(nums1, num2, method = 'cold', explanation = '') {
+        const field1 = document.getElementById('field1');
+        const field2 = document.getElementById('field2');
+        const explanationEl = document.getElementById('methodExplanation');
+        
+        field1.innerHTML = '';
+        field2.innerHTML = '';
+        explanationEl.textContent = explanation;
+
+        nums1.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'number';
+            if(method === 'karnaugh' && nums1.indexOf(n) < 5) {
+                div.classList.add('special');
+            }
+            div.textContent = n;
+            field1.appendChild(div);
+        });
+        
+        const div2 = document.createElement('div');
+        div2.className = 'number small';
+        if(method === 'ogneva') {
+            div2.classList.add('special');
+        }
+        div2.textContent = num2;
+        field2.appendChild(div2);
+        
+        // Анимация выбора
+        setTimeout(() => {
+            field1.querySelectorAll('.number').forEach(el => {
+                el.classList.add('selected');
+            });
+            div2.classList.add('selected');
+        }, 100);
+    }
+
+    // --- Инициализация при загрузке ---
+    document.getElementById('genBtn').onclick = generateNumbers;
+    updateStats();
+    generateNumbers();
 </script>
 </body>
 </html>
